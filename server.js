@@ -10,7 +10,7 @@ const port = process.env.PORT || 3000;
 app.use(express.json());
 app.use(cors());
 
-// PostgreSQL Connection (Railway)
+// PostgreSQL Connection (Neon)
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.DATABASE_URL.includes("railway.app") ? false : { rejectUnauthorized: false }
@@ -42,6 +42,9 @@ app.post('/submit-survey', async (req, res) => {
             fuel_discount
         } = req.body;
 
+        // ✅ Debugging: Log received survey data
+        console.log("Received survey data:", req.body);
+
         const query = `
             INSERT INTO survey_responses (
                 driver_type, pay_as_described, short_check, short_check_details,
@@ -65,18 +68,25 @@ app.post('/submit-survey', async (req, res) => {
             fuel_surcharge_paid, rate_confirmations, fuel_discount
         ];
 
-        const result = await pool.query(query, values);
+        try {
+            const result = await pool.query(query, values);
 
-        res.status(201).json({ message: 'Survey submitted successfully!', data: result.rows[0] });
+            // ✅ Debugging: Log database insert result
+            console.log("DB Insert Result:", result.rows[0]);
+
+            res.json({ message: "Survey submitted successfully!", data: result.rows[0] });
+        } catch (error) {
+            console.error("Error inserting into database:", error);
+            res.status(500).json({ error: "Database insert failed." });
+        }
+
     } catch (error) {
-        console.error('Error saving survey:', error);
-        res.status(500).json({ error: 'Server error, please try again later.' });
+        console.error("Error processing survey:", error);
+        res.status(500).json({ error: "Server error, please try again later." });
     }
 });
 
-// Start server
 app.listen(port, () => {
     console.log(`🚀 Server running on port ${port}`);
 });
-
 
