@@ -13,12 +13,15 @@ app.use(cors());
 // PostgreSQL Connection (Neon)
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL.includes("railway.app") ? false : { rejectUnauthorized: false }
+    ssl: { rejectUnauthorized: false } // Ensures SSL connection for Neon
 });
 
 // Handle Survey Submission
 app.post('/submit-survey', async (req, res) => {
     try {
+        // ✅ Debugging: Log full form submission data
+        console.log("Full form submission received:", req.body);
+
         const {
             driver_type,
             pay_as_described,
@@ -42,8 +45,10 @@ app.post('/submit-survey', async (req, res) => {
             fuel_discount
         } = req.body;
 
-        // ✅ Debugging: Log received survey data
-        console.log("Received survey data:", req.body);
+        if (!driver_type) {
+            console.error("Error: Driver type is missing");
+            return res.status(400).json({ error: "Driver type is required." });
+        }
 
         const query = `
             INSERT INTO survey_responses (
@@ -70,8 +75,8 @@ app.post('/submit-survey', async (req, res) => {
 
         try {
             const result = await pool.query(query, values);
-
-            // ✅ Debugging: Log database insert result
+            
+            // ✅ Debugging: Log successful database insert
             console.log("DB Insert Result:", result.rows[0]);
 
             res.json({ message: "Survey submitted successfully!", data: result.rows[0] });
@@ -86,6 +91,12 @@ app.post('/submit-survey', async (req, res) => {
     }
 });
 
+// Test Route for Debugging
+app.get('/', (req, res) => {
+    res.send('Survey API is running...');
+});
+
+// Start the Server
 app.listen(port, () => {
     console.log(`🚀 Server running on port ${port}`);
 });
